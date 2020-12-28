@@ -245,7 +245,9 @@ public final class AudioStream: AudioObject {
 
     private var isRegisteredForNotifications = false
 
-    private lazy var propertyListenerBlock: AudioObjectPropertyListenerBlock = { (_, inAddresses) -> Void in
+    private lazy var propertyListenerBlock: AudioObjectPropertyListenerBlock = { [weak self] (_, inAddresses) -> Void in
+        guard let self = self else { return }
+        
         let address = inAddresses.pointee
         let direction = AMCoreAudio.direction(to: address.mScope)
         let notificationCenter = NotificationCenter.defaultCenter
