@@ -241,27 +241,6 @@ public final class AudioStream: AudioObject {
         return asrd
     }()
 
-    // MARK: - Private Properties
-
-    private var isRegisteredForNotifications = false
-
-    private lazy var propertyListenerBlock: AudioObjectPropertyListenerBlock = { [weak self] (_, inAddresses) -> Void in
-        guard let self = self else { return }
-        
-        let address = inAddresses.pointee
-        let direction = AMCoreAudio.direction(to: address.mScope)
-        let notificationCenter = NotificationCenter.defaultCenter
-
-        switch address.mSelector {
-        case kAudioStreamPropertyIsActive:
-            notificationCenter.publish(AudioStreamEvent.isActiveDidChange(audioStream: self))
-        case kAudioStreamPropertyPhysicalFormat:
-            notificationCenter.publish(AudioStreamEvent.physicalFormatDidChange(audioStream: self))
-        default:
-            break
-        }
-    }
-
     // MARK: - Public Functions
 
     /// Returns an `AudioStream` by providing a valid audio stream identifier.
@@ -283,12 +262,10 @@ public final class AudioStream: AudioObject {
 
         guard owningObject != nil else { return nil }
 
-        registerForNotifications()
         AudioObjectPool.instancePool.setObject(self, forKey: NSNumber(value: UInt(objectID)))
     }
 
     deinit {
-        unregisterForNotifications()
         AudioObjectPool.instancePool.removeObject(forKey: NSNumber(value: UInt(objectID)))
     }
 
@@ -390,46 +367,6 @@ public final class AudioStream: AudioObject {
         guard AudioObjectHasProperty(id, &address) else { return nil }
 
         return setPropertyData(address, andValue: &value)
-    }
-
-    // MARK: - Notification Book-keeping
-
-    private func registerForNotifications() {
-        if isRegisteredForNotifications {
-            unregisterForNotifications()
-        }
-
-        var address = AudioObjectPropertyAddress(
-            mSelector: kAudioObjectPropertySelectorWildcard,
-            mScope: kAudioObjectPropertyScopeWildcard,
-            mElement: kAudioObjectPropertyElementWildcard
-        )
-
-        let err = AudioObjectAddPropertyListenerBlock(id, &address, NotificationCenter.notificationsQueue, propertyListenerBlock)
-
-        if noErr != err {
-            log("Error on AudioObjectAddPropertyListenerBlock: \(err)")
-        }
-
-        isRegisteredForNotifications = noErr == err
-    }
-
-    private func unregisterForNotifications() {
-        guard isRegisteredForNotifications else { return }
-
-        var address = AudioObjectPropertyAddress(
-            mSelector: kAudioObjectPropertySelectorWildcard,
-            mScope: kAudioObjectPropertyScopeWildcard,
-            mElement: kAudioObjectPropertyElementWildcard
-        )
-
-        let err = AudioObjectRemovePropertyListenerBlock(id, &address, NotificationCenter.notificationsQueue, propertyListenerBlock)
-
-        if noErr != err {
-            log("Error on AudioObjectRemovePropertyListenerBlock: \(err)")
-        }
-
-        isRegisteredForNotifications = noErr != err
     }
 }
 
