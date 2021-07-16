@@ -115,12 +115,12 @@ public final class AudioDevice: AudioObject {
 
         cachedDeviceName = getDeviceName()
         registerForNotifications()
-        AudioObjectPool.instancePool.setObject(self, forKey: NSNumber(value: UInt(objectID)))
+        AudioObjectPool.shared.set(self, for: objectID)
     }
 
     deinit {
         unregisterForNotifications()
-        AudioObjectPool.instancePool.removeObject(forKey: NSNumber(value: UInt(objectID)))
+        AudioObjectPool.shared.remove(objectID)
     }
 
     // MARK: - Class Functions
@@ -131,7 +131,7 @@ public final class AudioDevice: AudioObject {
     ///
     /// - Note: If identifier is not valid, `nil` will be returned.
     public static func lookup(by id: AudioObjectID) -> AudioDevice? {
-        var instance = AudioObjectPool.instancePool.object(forKey: NSNumber(value: UInt(id))) as? AudioDevice
+        var instance = AudioObjectPool.shared.get(id) as? AudioDevice
 
         if instance == nil {
             instance = AudioDevice(id: id)

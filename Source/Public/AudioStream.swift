@@ -247,7 +247,7 @@ public final class AudioStream: AudioObject {
     ///
     /// - Note: If identifier is not valid, `nil` will be returned.
     public static func lookup(by id: AudioObjectID) -> AudioStream? {
-        var instance = AudioObjectPool.instancePool.object(forKey: NSNumber(value: UInt(id))) as? AudioStream
+        var instance = AudioObjectPool.shared.get(id) as? AudioStream
 
         if instance == nil {
             instance = AudioStream(id: id)
@@ -262,11 +262,11 @@ public final class AudioStream: AudioObject {
 
         guard owningObject != nil else { return nil }
 
-        AudioObjectPool.instancePool.setObject(self, forKey: NSNumber(value: UInt(objectID)))
+        AudioObjectPool.shared.set(self, for: objectID)
     }
 
     deinit {
-        AudioObjectPool.instancePool.removeObject(forKey: NSNumber(value: UInt(objectID)))
+        AudioObjectPool.shared.remove(objectID)
     }
 
     /// All the available physical formats for this audio stream matching the current physical format's sample rate.
