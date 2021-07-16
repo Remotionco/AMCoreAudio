@@ -2,6 +2,8 @@
 
 | Version        | Description| Date     |
 | -------------:|:------------- |:--------:|
+| 3.5.1-develop     | Back ported thread safety for AudioObjectPool from SimplyCoreAudio v4.1 @jimknowler 
+| 3.5-develop       | @fbarbat
 | 3.4              | Added SPM support. | May 1st, 2020 |
 |                    | Added `isMasterChannelMuted(direction:`, `dataSource(direction:)`, `dataSources(direction:)` and `dataSourceName(dataSourceID:direction:)`. ||
 |                    | Renamed `canMuteVirtualMasterChannel(direction:)` to `canMuteMasterChannel(direction:)`. ||
