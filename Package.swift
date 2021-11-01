@@ -11,7 +11,13 @@ let package = Package(
     ],
     dependencies: [],
     targets: [
-        .target(name: "AMCoreAudio", path: "Source"),
+        .target(name: "AMCoreAudio",
+                dependencies: [
+                    .target(name: "SimplyCoreAudioC")
+                ],
+                path: "Source"),
+        .target(name: "SimplyCoreAudioC",
+                publicHeadersPath: "."),
         .testTarget(name: "AMCoreAudioTests", dependencies: ["AMCoreAudio"], path: "Tests")
     ],
     swiftLanguageVersions: [.v4, .v4_2, .v5]

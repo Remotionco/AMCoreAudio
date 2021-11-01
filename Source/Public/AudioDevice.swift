@@ -9,6 +9,8 @@
 import AudioToolbox.AudioServices
 import Foundation
 
+import SimplyCoreAudioC
+
 /// Represents a pair of stereo channel numbers.
 public typealias StereoPair = (left: UInt32, right: UInt32)
 
@@ -892,7 +894,7 @@ public final class AudioDevice: AudioObject {
     ///
     /// - Returns: `true` when the volume can be set, `false` otherwise.
     public func canSetVirtualMasterVolume(direction: Direction) -> Bool {
-        guard validAddress(selector: kAudioHardwareServiceDeviceProperty_VirtualMasterVolume,
+        guard validAddress(selector: kAudioHardwareServiceDeviceProperty_VirtualMainVolume,
                            scope: scope(direction: direction)) != nil else { return false }
 
         return true
@@ -905,7 +907,7 @@ public final class AudioDevice: AudioObject {
     ///
     /// - Returns: `true` on success, `false` otherwise.
     @discardableResult public func setVirtualMasterVolume(_ volume: Float32, direction: Direction) -> Bool {
-        guard let address = validAddress(selector: kAudioHardwareServiceDeviceProperty_VirtualMasterVolume,
+        guard let address = validAddress(selector: kAudioHardwareServiceDeviceProperty_VirtualMainVolume,
                                          scope: scope(direction: direction)) else { return false }
 
         return setProperty(address: address, value: volume)
@@ -917,7 +919,7 @@ public final class AudioDevice: AudioObject {
     ///
     /// - Returns: *(optional)* A `Float32` value with the scalar volume.
     public func virtualMasterVolume(direction: Direction) -> Float32? {
-        guard let address = validAddress(selector: kAudioHardwareServiceDeviceProperty_VirtualMasterVolume,
+        guard let address = validAddress(selector: kAudioHardwareServiceDeviceProperty_VirtualMainVolume,
                                          scope: scope(direction: direction)) else { return nil }
 
         return getProperty(address: address)
@@ -952,7 +954,7 @@ public final class AudioDevice: AudioObject {
     ///
     /// - Returns: *(optional)* A `Float32` value with the stereo balance.
     public func virtualMasterBalance(direction: Direction) -> Float32? {
-        guard let address = validAddress(selector: kAudioHardwareServiceDeviceProperty_VirtualMasterBalance,
+        guard let address = validAddress(selector: kAudioHardwareServiceDeviceProperty_VirtualMainBalance,
                                          scope: scope(direction: direction)) else { return nil }
 
         return getProperty(address: address)
@@ -968,7 +970,7 @@ public final class AudioDevice: AudioObject {
     ///
     /// - Returns: `true` on success, `false` otherwise.
     @discardableResult public func setVirtualMasterBalance(_ value: Float32, direction: Direction) -> Bool {
-        guard let address = validAddress(selector: kAudioHardwareServiceDeviceProperty_VirtualMasterBalance,
+        guard let address = validAddress(selector: kAudioHardwareServiceDeviceProperty_VirtualMainBalance,
                                          scope: scope(direction: direction)) else { return false }
 
         return setProperty(address: address, value: value)
