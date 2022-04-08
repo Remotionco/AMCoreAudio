@@ -9,10 +9,13 @@
 import AudioToolbox.AudioServices
 import Foundation
 
-import SimplyCoreAudioC
-
 /// Represents a pair of stereo channel numbers.
 public typealias StereoPair = (left: UInt32, right: UInt32)
+
+public enum AudioDeviceError : Error {
+    case invalidAddress
+    case coreAudioError(status: OSStatus, address: AudioObjectPropertyAddress?)
+}
 
 /// This class represents an audio device in the system and allows subscribing to audio device notifications.
 ///
@@ -538,7 +541,7 @@ public final class AudioDevice: AudioObject {
 
         set {
             if let value = newValue, let address = validAddress(selector: kAudioDevicePropertyDriverShouldOwniSub) {
-                _ = setProperty(address: address, value: value)
+                _ = try? setProperty(address: address, value: value)
             }
         }
     }
@@ -554,7 +557,7 @@ public final class AudioDevice: AudioObject {
 
         set {
             if let value = newValue, let address = validAddress(selector: kAudioDevicePropertySubMute) {
-                _ = setProperty(address: address, value: value)
+                _ = try? setProperty(address: address, value: value)
             }
         }
     }
@@ -570,7 +573,7 @@ public final class AudioDevice: AudioObject {
 
         set {
             if let value = newValue, let address = validAddress(selector: kAudioDevicePropertySubVolumeScalar) {
-                _ = setProperty(address: address, value: value)
+                _ = try? setProperty(address: address, value: value)
             }
         }
     }
@@ -586,7 +589,7 @@ public final class AudioDevice: AudioObject {
 
         set {
             if let value = newValue, let address = validAddress(selector: kAudioDevicePropertySubVolumeDecibels) {
-                _ = setProperty(address: address, value: value)
+                _ = try? setProperty(address: address, value: value)
             }
         }
     }
@@ -757,12 +760,12 @@ public final class AudioDevice: AudioObject {
     /// - Parameter direction: A direction.
     ///
     /// - Returns: `true` on success, `false` otherwise.
-    @discardableResult public func setVolume(_ volume: Float32, channel: UInt32, direction: Direction) -> Bool {
+    @discardableResult public func setVolume(_ volume: Float32, channel: UInt32, direction: Direction) throws -> Bool {
         guard let address = validAddress(selector: kAudioDevicePropertyVolumeScalar,
                                          scope: scope(direction: direction),
                                          element: channel) else { return false }
 
-        return setProperty(address: address, value: volume)
+        return try setProperty(address: address, value: volume)
     }
 
     /// Mutes a channel for a given direction.
@@ -772,12 +775,12 @@ public final class AudioDevice: AudioObject {
     /// - Parameter direction: A direction.
     ///
     /// - Returns: `true` on success, `false` otherwise.
-    @discardableResult public func setMute(_ shouldMute: Bool, channel: UInt32, direction: Direction) -> Bool {
+    @discardableResult public func setMute(_ shouldMute: Bool, channel: UInt32, direction: Direction) throws -> Bool {
         guard let address = validAddress(selector: kAudioDevicePropertyMute,
                                          scope: scope(direction: direction),
                                          element: channel) else { return false }
 
-        return setProperty(address: address, value: shouldMute)
+        return try setProperty(address: address, value: shouldMute)
     }
 
     /// Whether a channel is muted for a given direction.
@@ -906,11 +909,11 @@ public final class AudioDevice: AudioObject {
     /// - Parameter direction: A direction.
     ///
     /// - Returns: `true` on success, `false` otherwise.
-    @discardableResult public func setVirtualMasterVolume(_ volume: Float32, direction: Direction) -> Bool {
+    @discardableResult public func setVirtualMasterVolume(_ volume: Float32, direction: Direction) throws -> Bool {
         guard let address = validAddress(selector: kAudioHardwareServiceDeviceProperty_VirtualMainVolume,
                                          scope: scope(direction: direction)) else { return false }
 
-        return setProperty(address: address, value: volume)
+        return try setProperty(address: address, value: volume)
     }
 
     /// The virtual master scalar volume for a given direction.
@@ -969,11 +972,11 @@ public final class AudioDevice: AudioObject {
     /// - Parameter direction: A direction.
     ///
     /// - Returns: `true` on success, `false` otherwise.
-    @discardableResult public func setVirtualMasterBalance(_ value: Float32, direction: Direction) -> Bool {
+    @discardableResult public func setVirtualMasterBalance(_ value: Float32, direction: Direction) throws -> Bool {
         guard let address = validAddress(selector: kAudioHardwareServiceDeviceProperty_VirtualMainBalance,
                                          scope: scope(direction: direction)) else { return false }
 
-        return setProperty(address: address, value: value)
+        return try setProperty(address: address, value: value)
     }
 
     // MARK: - 〰 Sample Rate Functions
@@ -1001,24 +1004,30 @@ public final class AudioDevice: AudioObject {
     /// - Parameter sampleRate: The new nominal sample rate.
     ///
     /// - Returns: `true` on success, `false` otherwise.
-    @discardableResult public func setNominalSampleRate(_ sampleRate: Float64) -> Bool {
-        guard let address = validAddress(selector: kAudioDevicePropertyNominalSampleRate) else { return false }
+    @discardableResult public func setNominalSampleRate(_ sampleRate: Float64) throws -> Bool {
+        guard let address = validAddress(selector: kAudioDevicePropertyNominalSampleRate) else {
+            throw AudioDeviceError.invalidAddress
+        }
 
-        return setProperty(address: address, value: sampleRate)
+        return try setProperty(address: address, value: sampleRate)
     }
 
     /// A list of all the nominal sample rates supported by this audio device.
     ///
     /// - Returns: *(optional)* A `Float64` array containing the nominal sample rates.
-    public func nominalSampleRates() -> [Float64]? {
+    public func nominalSampleRates() throws -> [Float64] {
         guard let address = validAddress(selector: kAudioDevicePropertyAvailableNominalSampleRates,
-                                         scope: kAudioObjectPropertyScopeWildcard) else { return nil }
+                                         scope: kAudioObjectPropertyScopeWildcard) else {
+            throw AudioDeviceError.invalidAddress
+        }
 
         var sampleRates = [Float64]()
         var valueRanges = [AudioValueRange]()
         let status = getPropertyDataArray(address, value: &valueRanges, andDefaultValue: AudioValueRange())
 
-        guard noErr == status else { return nil }
+        guard noErr == status else {
+            throw AudioDeviceError.coreAudioError(status: status, address: address)
+        }
 
         // A list of all the possible sample rates up to 192kHz
         // to be used in the case we receive a range (see below)
@@ -1199,11 +1208,11 @@ public final class AudioDevice: AudioObject {
     /// - Parameter clockSourceID: A clock source ID.
     ///
     /// - Returns: `true` on success, `false` otherwise.
-    @discardableResult public func setClockSourceID(_ clockSourceID: UInt32) -> Bool {
+    @discardableResult public func setClockSourceID(_ clockSourceID: UInt32) throws -> Bool {
         guard let address = validAddress(selector: kAudioDevicePropertyClockSource,
                                          scope: kAudioObjectPropertyScopeGlobal) else { return false }
 
-        return setProperty(address: address, value: clockSourceID)
+        return try setProperty(address: address, value: clockSourceID)
     }
 
     // MARK: - ↹ Latency Functions
@@ -1251,11 +1260,11 @@ public final class AudioDevice: AudioObject {
     /// Toggles hog mode on/off
     ///
     /// - Returns: `true` on success, `false` otherwise.
-    private func toggleHogMode() -> Bool {
+    private func toggleHogMode() throws -> Bool {
         guard let address = validAddress(selector: kAudioDevicePropertyHogMode,
                                          scope: kAudioObjectPropertyScopeWildcard) else { return false }
 
-        return setProperty(address: address, value: 0)
+        return try setProperty(address: address, value: 0)
     }
 
     /// Attempts to set the `pid` that currently owns exclusive access to the
@@ -1263,10 +1272,10 @@ public final class AudioDevice: AudioObject {
     ///
     /// - Returns: `true` on success, `false` otherwise.
     @discardableResult
-    public func setHogMode() -> Bool {
+    public func setHogMode() throws -> Bool {
         guard hogModePID() != pid_t(ProcessInfo.processInfo.processIdentifier) else { return false }
 
-        return toggleHogMode()
+        return try toggleHogMode()
     }
 
     /// Attempts to make the audio device available to all processes by setting
@@ -1274,10 +1283,10 @@ public final class AudioDevice: AudioObject {
     ///
     /// - Returns: `true` on success, `false` otherwise.
     @discardableResult
-    public func unsetHogMode() -> Bool {
+    public func unsetHogMode() throws -> Bool {
         guard hogModePID() == pid_t(ProcessInfo.processInfo.processIdentifier) else { return false }
 
-        return toggleHogMode()
+        return try toggleHogMode()
     }
 
     // MARK: - ♺ Volume Conversion Functions

@@ -233,7 +233,7 @@ extension AudioObject {
     }
 
     // setProperty T
-    func setProperty<T>(address: AudioObjectPropertyAddress, value: T) -> Bool {
+    func setProperty<T>(address: AudioObjectPropertyAddress, value: T) throws -> Bool {
         let status: OSStatus
 
         if let unwrappedValue = value as? Bool {
@@ -255,7 +255,7 @@ extension AudioObject {
         default:
 
             log("Unable to set property with address (\(address)). Status: \(status)")
-            return false
+            throw AudioDeviceError.coreAudioError(status: status, address: address)
         }
     }
 }
